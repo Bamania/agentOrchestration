@@ -1,0 +1,2 @@
+#First difficulty i faced was how to create the right abstraction layer ,for eg should i make the client in the llmProvider abstract class or should i implement it in the concrete classes !
+#2-too many addition and changing in the parameter of the create fx of the llmprovider ! so i just created an llmInput type ! -->but then again i shouldnt have make it for the create fx!

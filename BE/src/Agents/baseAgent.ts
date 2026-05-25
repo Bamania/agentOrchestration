@@ -1,6 +1,7 @@
 // Todo-1,create a model provider and agents class from our MAIN AGENT SDK(cortex) and export it here, so that we can use it in our API routes and services
 
-import type { AgentResponse } from "../llmProviders/globalTypes.js";
+import type { AgentResponse } from "../globalTypes.js";
+import type llmProvider from "../llmProviders/lllmProvider.js";
 
 
 abstract class BaseAgent {
@@ -10,10 +11,10 @@ abstract class BaseAgent {
   context:string;
   max_iteration:number=10;
   instruction:string;
-  model_client:string;
+  model_client:llmProvider; //this is the wrapper that will wrap every provider we have!
   cancellationToken:any; //probably using false/true?!
 
-  constructor(name: string, instruction:string,tools: Array<any>, memory: any,model_client:string,context?:string,max_iteration?:number) {
+  constructor(name: string, instruction:string,tools: Array<any>, memory: any,model_client:llmProvider,context?:string,max_iteration?:number) {
     this.name = name;
     this.instruction = instruction;
     this.tools = tools;
