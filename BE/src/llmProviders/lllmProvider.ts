@@ -13,5 +13,4 @@ import type { AgentResponse, LLMInput } from "../globalTypes.js";
 
 }
 
-export default llmProvider
-;
+export default llmProvider;

@@ -1,5 +1,12 @@
+import type { ToolCall } from "./Agents/toolRunner/types.js";
+
 export interface AgentResponse {
-    message:string;
+    // normal text answer (null when the model only returned tool calls)
+    message:string | null;
+    // present when the model wants tools executed (provider-agnostic, normalized)
+    tool_calls?:ToolCall[];
+    // why the model stopped: "stop" | "tool_calls" | "length" | "content_filter" ...
+    finishReason?:string;
     tokens:{
         inputTokens:number;
         outputTokens:number;
@@ -21,4 +28,5 @@ export interface LLMInput{
     systemPrompt?:string;
     context:any;//extra info around the userMessage
     cancellationtoken?:any;
+    outputSchema?:any;// 
 }

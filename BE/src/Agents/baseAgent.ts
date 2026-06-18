@@ -1,12 +1,13 @@
 // Todo-1,create a model provider and agents class from our MAIN AGENT SDK(cortex) and export it here, so that we can use it in our API routes and services
 
 import type { AgentResponse } from "../globalTypes.js";
+import type { IToolRunner } from "./toolRunner/types.js";
 import type llmProvider from "../llmProviders/lllmProvider.js";
 
 
 abstract class BaseAgent {
   name: string;
-  tools: Array<any>; // [websearchtool,tool2 etc]
+  toolRunner: IToolRunner; // injected collaborator that owns tool schemas + execution
   memory: any; //need to figure out the type of memoy
   context:string;
   max_iteration:number=10;
@@ -14,10 +15,10 @@ abstract class BaseAgent {
   model_client:llmProvider; //this is the wrapper that will wrap every provider we have!
   cancellationToken:any; //probably using false/true?!
 
-  constructor(name: string, instruction:string,tools: Array<any>, memory: any,model_client:llmProvider,context?:string,max_iteration?:number) {
+  constructor(name: string, instruction:string,toolRunner: IToolRunner, memory: any,model_client:llmProvider,context?:string,max_iteration?:number) {
     this.name = name;
     this.instruction = instruction;
-    this.tools = tools;
+    this.toolRunner = toolRunner;
     this.memory = memory;
     this.context=context || "";
     this.model_client=model_client;
