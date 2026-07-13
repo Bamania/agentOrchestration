@@ -8,13 +8,12 @@ import type llmProvider from "../llmProviders/lllmProvider.js";
 abstract class BaseAgent {
   name: string;
   toolRunner: IToolRunner; // injected collaborator that owns tool schemas + execution
-  memory: any; //need to figure out the type of memoy
+  memory: any; //need to figure out the type of memoy,maybe we could use a memory manager class for easy context isolation !
   context:string;
   max_iteration:number=10;
   instruction:string;
   model_client:llmProvider; //this is the wrapper that will wrap every provider we have!
   cancellationToken:any; //probably using false/true?!
-
   constructor(name: string, instruction:string,toolRunner: IToolRunner, memory: any,model_client:llmProvider,context?:string,max_iteration?:number) {
     this.name = name;
     this.instruction = instruction;

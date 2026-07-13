@@ -17,3 +17,5 @@ export  function formatToCortexMessage(message:string):AgentInput{
 // normalizes its OWN raw response into AgentResponse (e.g.
 // OpenAiProvider.formatopenAiResponse), so the agent stays provider-agnostic
 // and adding a provider never edits a central switch.
+
+

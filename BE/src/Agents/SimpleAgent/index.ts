@@ -2,7 +2,7 @@ import type { AgentResponse, LLMInput } from "../../globalTypes.js";
 import type { IToolRunner } from "../toolRunner/types.js";
 import type llmProvider from "../../llmProviders/lllmProvider.js";
 import BaseAgent from "../baseAgent.js";
-
+// agent msg=> ConversationalHistory+userMessage+Memory+systemPrompt+tools
 class Agent extends BaseAgent {
   userMessage: string | Array<string>;
   constructor(
@@ -49,8 +49,7 @@ class Agent extends BaseAgent {
       };
 
       const response = await this.model_client.create(agentInput);
-
-      // No tool calls -> the model gave its final answer.
+      // no tool call model gave its final response !
       if (!response.tool_calls?.length) {
         return response;
       }
