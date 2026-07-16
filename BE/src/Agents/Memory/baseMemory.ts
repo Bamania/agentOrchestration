@@ -1,10 +1,13 @@
-abstract class memoryManager {
+abstract class baseMemory {
 
   protected messages:IMessage[]
 
   abstract addMessage(message:IHistoryMessage):string
   abstract removeMessage(messageID:number):string
-  abstract fetchconversationHistory():IMessage
+  abstract getContext():IMessage
+  // abstract getMemory():IMemory
+
+}
 
 
-asdI}
+export default baseMemory
