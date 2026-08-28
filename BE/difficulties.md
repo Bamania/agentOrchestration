@@ -42,3 +42,6 @@ lets say you defined a name in the parent class as protected variable ,then that
 this.name but that name wont be accessible in the object of that child class ! 
 So if the memoryManager is going to get used as a composition in the agent class pvt or protected wont matter,but if we lets say wish to extend the functionalities of the memoryMAnager then we must make sure the variables are protected so that extending that class would allow us to use in the parent class and thus we could
 manipulate the variables in the memoryManager(message variable) 
+
+
+#5 Its hard to decide what object interface should your agent memory follow,becuase initally i decided to have an id ,content and the timeStamp.but obviously if you wish to have a Nice agent which is very efficient in retrieving the right info then you must know some FACTS ,for eg An agent memory must preservers who a memory belongs to and where it applies? so you must know the user Id,agent id and the runId/session id it could be used ! now only if i had knew this fact ,i would have designed the schema in a different and better way ! so to get these fact i started reading blogs ,on how to understand the agent memory

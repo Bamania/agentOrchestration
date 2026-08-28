@@ -9,5 +9,4 @@ abstract class baseMemory {
 
 }
 
-
 export default baseMemory
