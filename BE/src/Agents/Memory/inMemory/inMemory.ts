@@ -1,5 +1,4 @@
 import baseMemory from "../baseMemory.js";
-
 class InMemory extends baseMemory { 
 
     // private inMemory: IMessage[] = []

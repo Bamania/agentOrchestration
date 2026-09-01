@@ -45,3 +45,11 @@ manipulate the variables in the memoryManager(message variable)
 
 
 #5 Its hard to decide what object interface should your agent memory follow,becuase initally i decided to have an id ,content and the timeStamp.but obviously if you wish to have a Nice agent which is very efficient in retrieving the right info then you must know some FACTS ,for eg An agent memory must preservers who a memory belongs to and where it applies? so you must know the user Id,agent id and the runId/session id it could be used ! now only if i had knew this fact ,i would have designed the schema in a different and better way ! so to get these fact i started reading blogs ,on how to understand the agent memory
+
+#6 since memeoryclass wa going as a composition how to understand if the class is becoming overwheling introduce a managher for that ! - i dint know much about facade but now i know,since the memeory manager needs to give the right ctx 
+to the agent layer it will be callinig its short term memeory methods,long term ,and what not ! (we will explore about it later) and this will get  the agent layer lot of trouble to call memory.A() and then memory.B() etc isntead we willj 
+just introduce a pattern ka facade where it willl be passed as a ccomposition to the agent layer ! so that out clien doesnt know shit about the sub systems !
+so we wwill clal that as a memeory manager !
+
+#7 i personally liked this issue because this was solved using strategy pattern something i thoguht i knew ! so basically i was plannign to again make the memeory manager have short term and long term classes as a compostie only
+now the issue is if in this case if i make this the memeory manager has to be opened and changed or probably introduced to have a new obj of storage ! right? so this is the issue ,i dont wanna touch the memeoryManager as this is goign to be very fragile if you want the reason or jsut for now take ti as an assignment how you could stop the memoryManager to be not editable after new methd of short strategy !
