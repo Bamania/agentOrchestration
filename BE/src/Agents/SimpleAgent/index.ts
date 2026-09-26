@@ -2,6 +2,7 @@ import type { AgentResponse, LLMInput } from "../../globalTypes.js";
 import type { IToolRunner } from "../toolRunner/types.js";
 import type llmProvider from "../../llmProviders/lllmProvider.js";
 import BaseAgent from "../baseAgent.js";
+import type { IMemory } from "../Memory/types.js";
 // agent msg=> ConversationalHistory+userMessage+Memory+systemPrompt+tools
 class Agent extends BaseAgent {
   userMessage: string | Array<string>;
@@ -9,7 +10,7 @@ class Agent extends BaseAgent {
     name: string,
     instruction: string,
     toolRunner: IToolRunner,
-    memory: any,
+    memory:IMemory,
     model_client: llmProvider,
     context?: string,
     max_iteration?: number,
@@ -42,7 +43,7 @@ class Agent extends BaseAgent {
       const agentInput: LLMInput = {
         systemPrompt: this.instruction,
         userMessage: userMessage,
-        memory: this.memory,
+        memory: this.memory.getMemory(),
         tools: this.toolRunner.getDefinitions(),
         context: context,
         cancellationtoken: cancellationToken,

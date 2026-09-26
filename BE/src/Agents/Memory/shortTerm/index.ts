@@ -1,5 +1,6 @@
-import baseMemory from "../baseMemory.js";
-class InMemory extends baseMemory { 
+import MemoryStrategy from "../memoryStrategy/memory-strategy.js";
+import type { IMessage } from "../types.js";
+class ShortTermMemory extends MemoryStrategy { 
 
     // private inMemory: IMessage[] = []
     constructor(){
@@ -7,7 +8,7 @@ class InMemory extends baseMemory {
 
     }
 
-    getContext(): IMessage {
+    getMemory(): IMessage[] {
         return this.messages //returns the complete Array
 
     }
@@ -21,5 +22,9 @@ class InMemory extends baseMemory {
         return "Message removed successfully"
     }
 
+    updateMemory(): void {
+        // Implementation for updating short-term memory
+    }
 
 }
+export default ShortTermMemory

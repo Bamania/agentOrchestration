@@ -53,3 +53,11 @@ so we wwill clal that as a memeory manager !
 
 #7 i personally liked this issue because this was solved using strategy pattern something i thoguht i knew ! so basically i was plannign to again make the memeory manager have short term and long term classes as a compostie only
 now the issue is if in this case if i make this the memeory manager has to be opened and changed or probably introduced to have a new obj of storage ! right? so this is the issue ,i dont wanna touch the memeoryManager as this is goign to be very fragile if you want the reason or jsut for now take ti as an assignment how you could stop the memoryManager to be not editable after new methd of short strategy !
+
+#8 again not sure if i had wrote it somewhere above or not but i was facing issue in finalizing the interface for the memory layer and i did some chatting with claude and i got to we shouldnt finalize the interface inwards out 
+
+#9 One thing worth noticing is ,something i did explicitly is that if you notice the tool runner class ,is just a class which implments an INTERFACE i.e IToolRunner now i could also do the same for the 
+Memory layer ,but i deliberately made the MemoryManager(facade) as Abstract class and not as a class+Interface style
+
+
+#10 i was writing the memoryTool and i almost forgot that we need to write 
