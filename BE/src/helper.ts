@@ -1,6 +1,6 @@
-import type { AgentInput } from "./globalTypes.js";
+import type { MessageInput } from "./globalTypes.js";
 
-export  function formatToCortexMessage(message:string):AgentInput{
+export  function formatToCortexMessage(message:string):MessageInput{
     if(!message.trim()) throw new Error("Message cannot be empty");
     // if(Array.isArray(message)) {
     //     ["hey there","how are you?!"]
@@ -8,8 +8,7 @@ export  function formatToCortexMessage(message:string):AgentInput{
     // }
         return {
         content:message,
-        role:"user",
-        name:""
+        role:"user"
     }
 }
 

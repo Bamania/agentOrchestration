@@ -1,109 +1,120 @@
 import llmProvider from "../lllmProvider.js";
 import OpenAI from "openai";
-import type { AgentInput, AgentResponse, LLMInput } from "../../globalTypes.js";
-// import formatToCortexMessage from "../../helper.js";
-import {z}  from "zod";
-class OpenAiProvider extends llmProvider {
+import type { AgentResponse, LLMInput, TokenUsage, HistoryMessage } from "../../globalTypes.js";
 
+class OpenAiProvider extends llmProvider {
   apiKey: string;
   client: OpenAI;
+
+  constructor(apiKey: string, model_name: string) {
+    super(model_name);
+    this.apiKey = apiKey;
+    this.client = new OpenAI({ apiKey: this.apiKey });
+  }
+
   // Translate OpenAI's raw response into our provider-agnostic AgentResponse.
   // This is the ONLY place that knows OpenAI's shape - the agent never sees it.
+  //
+  // Note the shape of this function now: it RETURNS one of two union members
+  // instead of building one object with half its fields null. The branch that
+  // used to be implicit ("is tool_calls empty?") is now explicit and the caller
+  // cannot forget to handle it.
   private formatopenAiResponse(response: any, model_name: string): AgentResponse {
     const choice = response.choices?.[0];
-    const message = choice?.message;
+    const raw = choice?.message;
+
+    const usage: TokenUsage = {
+      inputTokens: response.usage?.prompt_tokens ?? 0,
+      outputTokens: response.usage?.completion_tokens ?? 0,
+      totalTokens: response.usage?.total_tokens ?? 0,
+    };
 
     // OpenAI tool_calls look like { id, type, function: { name, arguments } }
-    // where `arguments` is a JSON *string*. Normalize into our ToolCall shape,
-    // parsing the arguments here so the agent gets a ready-to-use object.
-    const tool_calls = message?.tool_calls?.map((tc: any) => ({
+    // where `arguments` is a JSON *string*. Normalize into our ToolCall shape.
+    const tool_calls = raw?.tool_calls?.map((tc: any) => ({
       id: tc.id,
       tool_name: tc.function.name,
       type: tc.type,
       parameters: JSON.parse(tc.function.arguments || "{}"),
     }));
 
-    return {
-      // content is null on a pure tool-call response - that's expected.
-      message: message?.content ?? null,
-      tool_calls,
-      finishReason: choice?.finish_reason,
-      tokens: {
-        inputTokens: response.usage?.prompt_tokens ?? 0,
-        outputTokens: response.usage?.completion_tokens ?? 0,
-        totalTokens: response.usage?.total_tokens ?? 0,
-      },
-      modelname: model_name,
-    };
+    if (tool_calls?.length) {
+      return { kind: "tool_request", tool_calls, usage, model: model_name, finishReason: "tool_calls" };
+    }
+    return { kind: "final", message: raw?.content ?? "", usage, model: model_name, finishReason: "stop" };
   }
 
-  constructor(apiKey: string, model_name: string, client: any) {
-    super(model_name);
-    this.apiKey = apiKey;
-    this.client = new OpenAI({
-      apiKey: this.apiKey,
-    });
-  }
-  async create(
-    llmMessage: LLMInput,
-   
-  ): Promise<AgentResponse> {
-    // let input: AgentInput = formatToCortexMessage(userMessage); //later we will develop a fx to format this according to our api msg
-    let response:any  ; //this type should be the type of response ai provider gives us
-    type outputSchemaType = z.infer<typeof llmMessage.outputSchema>;
-    let outputSchema:outputSchemaType;
-    if(llmMessage.outputSchema){
-      response = await this.client.chat.completions.create({
-        model: this.model_name,
-        messages: [
-          { 
-            role: "system",
-            content: llmMessage.systemPrompt || "You are a helpful assistant.",
-          },
-          {
-              role: "user",
-              // ai helped to fix this type bug !
-              content: typeof llmMessage.userMessage === "string" ? llmMessage.userMessage : llmMessage.userMessage.join("\n"),
-          }
-          ],
-          tools:llmMessage.tools,
-          // max_tokens:
-          // implement the structure output logic
-         response_format: { type: "json_schema", json_schema:outputSchema }
-        
+  /**
+   * Turn our LLMInput into OpenAI's `messages` array.
+   *
+   * This is the payoff for keeping `recalled` separate from `messages`:
+   * recalled facts are background knowledge and land in a system block, where
+   * models weight them as standing truth; the conversation stays as chat turns.
+   * A different provider is free to make the opposite choice - that decision
+   * belongs HERE, not in the memory layer.
+   */
+  private buildMessages(input: LLMInput): any[] {
+    const messages: any[] = [
+      { role: "system", content: input.systemPrompt || "You are a helpful assistant." },
+    ];
+
+    if (input.recalled?.length) {
+      messages.push({
+        role: "system",
+        content:
+          "Relevant context recalled from earlier:\n" +
+          input.recalled.map((m: HistoryMessage) => `- ${m.content}`).join("\n"),
       });
     }
-     response = await this.client.chat.completions.create({
-      model: this.model_name,
-      messages: [
-        { 
-          role: "system",
-          content: llmMessage.systemPrompt || "You are a helpful assistant.",
-        },
-        {
-            role: "user",
-            // ai helped to fix this type bug !
-            content: typeof llmMessage.userMessage === "string" ? llmMessage.userMessage : llmMessage.userMessage.join("\n"),
-        }
-        ],
-        tools:llmMessage.tools,
-        // max_tokens:
-        
-    });
-    
-    return this.formatopenAiResponse(response,this.model_name);
-    
+
+    for (const m of input.messages) {
+      if (m.role === "tool") {
+        // A real role:"tool" message must immediately follow an assistant message
+        // carrying the matching tool_calls payload, which we do not store yet -
+        // sending one here would be rejected. Replaying as assistant text keeps
+        // the information in context and keeps the request valid.
+        messages.push({ role: "assistant", content: `Tool ${m.tool_name ?? "unknown"} returned: ${m.content}` });
+      } else {
+        messages.push({ role: m.role, content: m.content });
+      }
+    }
+    return messages;
   }
-  async *create_stream(
-   llmMessage: LLMInput,
-  ): AsyncGenerator<AgentResponse, void, unknown> {
-    // Implement the logic to call OpenAI Api in streaming way
-    // const response=await this.client.chat.completions.create({
-    // yield FormatToCortexResponse(response)- we will implement these steps ! later
+
+  async create(llmMessage: LLMInput): Promise<AgentResponse> {
+    const messages = this.buildMessages(llmMessage);
+
+    // Structured output is a different request shape, so it RETURNS here
+    // instead of falling through into the plain call below (that fall-through
+    // used to make - and discard - a whole extra API call).
+    if (llmMessage.outputSchema) {
+      const structured = await this.client.chat.completions.create({
+        model: llmMessage.model || this.model_name,
+        messages,
+        ...(llmMessage.tools ? { tools: llmMessage.tools as any } : {}),
+        response_format: { type: "json_schema", json_schema: llmMessage.outputSchema as any },
+      });
+      return this.formatopenAiResponse(structured, this.model_name);
+    }
+
+    const response = await this.client.chat.completions.create({
+      model: llmMessage.model || this.model_name,
+      messages,
+      ...(llmMessage.tools ? { tools: llmMessage.tools as any } : {}),
+      ...(llmMessage.maxTokens !== undefined ? { max_tokens: llmMessage.maxTokens } : {}),
+      ...(llmMessage.temperature !== undefined ? { temperature: llmMessage.temperature } : {}),
+    });
+
+    return this.formatopenAiResponse(response, this.model_name);
+  }
+
+  async *create_stream(llmMessage: LLMInput): AsyncGenerator<AgentResponse, void, unknown> {
+    // TODO: real streaming - yield partial AgentResponse as chunks arrive
     yield {
+      kind: "final",
       message: "streaming response from openai provider",
-      tokens: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-      modelname: this.model_name,
+      usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      model: this.model_name,
     };
   }
 }

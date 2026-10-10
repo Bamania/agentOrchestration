@@ -1,28 +1,51 @@
 import MemoryManager from "../index.js";
+import type {
+    HistoryMessage,
+    MemoryRequest,
+    MessageInput,
+    Result,
+} from "../../../globalTypes.js";
 
-interface MemoryContent {
-    id:number,
-    content:string
+// NOTE: the old local `MemoryContent {id, content}` is replaced by the shared
+// HistoryMessage - it adds `role` (without which a stored message cannot be
+// replayed into a provider request) and `chatId` (without which one chat's
+// history leaks into another).
 
-}
+let seq = 0;
 
-class ListMemory extends  MemoryManager {
-private messages: MemoryContent[]  = [];  //@UPDATE-type of messages to the MemoryContent
+class ListMemory extends MemoryManager {
+private messages: HistoryMessage[]  = [];
 private maxMessages: number;
 constructor(maxMessages: number) {
     super();
     this.maxMessages = maxMessages;
   }
 
-  add(messsageContent:any): void { // @UPDATE-whenever a fx executes think of the success and failure msgs,maybe a json? then make a interface that is universal for every function !
+  /** Fills in the identity fields the caller has no business knowing. */
+  private stamp(request: MemoryRequest, message: MessageInput): HistoryMessage {
+    seq += 1;
+    return {
+      id: `${Date.now().toString(36)}-${seq.toString(36)}`,
+      role: message.role,
+      content: message.content,
+      timestamp: Date.now(),
+      chatId: request.chatId,
+      ...(request.agentId !== undefined ? { agentId: request.agentId } : {}),
+      ...(message.tool_call_id !== undefined ? { tool_call_id: message.tool_call_id } : {}),
+      ...(message.tool_name !== undefined ? { tool_name: message.tool_name } : {}),
+    };
+  }
+
+  async add(request: MemoryRequest, message: MessageInput): Promise<Result<HistoryMessage>> {
+    const messsageContent = this.stamp(request, message);
     if(this.messages.length >= this.maxMessages){
         // we will need to do the compression ! before storing the messages ,since the latest memory resides in the end of the array ,we will delete from the front !
-        
-        
+
+
         for(let i=0;i<=this.maxMessages-2;i++){
             let currValue=this.messages[i];
             let nextValue=this.messages[i+1];
-           
+
             this.messages[i]=nextValue!;
             this.messages[i+1]=currValue!;
 
@@ -36,31 +59,35 @@ constructor(maxMessages: number) {
         this.messages.push(messsageContent);
     }
 
+    return { ok: true, value: messsageContent };
   }
-  query(messageContent:any,limit:number=10):Array<MemoryContent> { //@UPDATE-messageContent obj should be having keys that it can support the add,query and all the func 
-    // this function is to search the string match in the Memory array and then return it 
-    let queryString='' //@UPDATE-make sure this variable holds the string that is comming from the messageContent obj
-    const matchingMemories:any=[] //@UPDATE- type of this is == this.messages
+  async query(request:MemoryRequest):Promise<Array<HistoryMessage>> {
+    const limit = request.limit ?? 10;
+    // this function is to search the string match in the Memory array and then return it
+    let queryString=request.query ?? ''
+    const matchingMemories:HistoryMessage[]=[]
     queryString.toLowerCase();
      for(let i=this.maxMessages;i>=this.maxMessages-limit;i--){
          let storedString=this.messages[i]?.content.toLowerCase()  //@UPDATE-add the content key in the messageContent obj
          // matchingMemories.push(this.messages[i]);
          if(storedString==queryString){
-            matchingMemories.push(this.messages[i])
+            matchingMemories.push(this.messages[i]!)
          }
 
        }
 
        return matchingMemories;
-  } 
+  }
 
-  get_context(messageContent: any,maxItems:number=10): Array<MemoryContent> {
+  async get_context(request: MemoryRequest): Promise<Array<HistoryMessage>> {
+      const maxItems = request.limit ?? 10;
       //this function returns the latest memory upto certain limit,
       //make an array copy the last 10 message body from the this.message and paste it and return the new array !
 
-      const recentMemories:any=[]//@UPDATE-update the recentMemories type to the messages type ,because it is going to store the same obj as memories
+      const recentMemories:HistoryMessage[]=[]
        for(let i=this.maxMessages;i>=this.maxMessages-maxItems;i--){
-        recentMemories.push(this.messages[i]);
+        const m = this.messages[i];
+        if (m !== undefined) recentMemories.push(m);
 
        }
        return recentMemories;

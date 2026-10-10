@@ -11,7 +11,7 @@ have in its run call before finally sending it to the ai provider -agents system
 3-Implement the structure output key in the agent response
 
 4-So to add any tool responnse in our agent we must first understand that we use a unified agent response approach
-our agent class shouldnt be dealing with the tool response logic and everything so we manually need to 
+<!-- our agent class shouldnt be dealing with the tool response logic and everything so we manually need to  -->
 format the llm providers response ! and send it in a unified way from our agent (check the helper.ts ,formatAgentResponse() ) ,that function has a switch case and executes different way of formating to handle the logic
 
 to integrate the tool we must need to understand that we need a place

@@ -61,3 +61,80 @@ Memory layer ,but i deliberately made the MemoryManager(facade) as Abstract clas
 
 
 #10 i was writing the memoryTool and i almost forgot that we need to write 
+
+#11 Shit started getting real,now i need to understand how to incorporate a middleware library for all the agents
+the book doesnt describe much about middleware in that depth,after learning through the internet,i have realized my middleware
+should be extendible enough that if i wish to add any new power to the agent request i could just be able to do that by inserting a new function without wasting much time changing the architecture from the scratch ! That brings to our next question
+what is the LLD of our middleware,we gotta figure it out will also validate the designw with opus to make sure i am not messing it up!
+so first thing i need to decide the OBJ interface that i will be passing to our all the possible middleware fx which will be flexible enough that our future middleware fx will also be able to use it !
+so the very first param i could think is the USER REQUEST- or the exact query that will be used as a prompt for the LLM call,now with that i mean the exact object that is passed to the llm,having the memory/history/conversations/userQuery/toolCallresult//totalTools/outputGenerated,output generated also because to handle those middleware fx which will exist after the LLM Response !
+These are what i am able to think of now .
+{
+    userQuery:
+    history:
+    memory:
+    toolCallResult:
+    Tools:
+    Output:
+}
+the above object could be summed into LLMINput type we already have and the output will be AgentResponse ,so our new object or context that I should be passing ot each middleware fx is 
+
+ctx = {
+  request:  LLMInput,              
+  response: AgentResponse | null,  
+  ... any more keys if required for different middleware
+}
+and also i am missing the more important point of middleware that is THE very basic and that is authentication so we also need to add the sessionId,userId ,iteration,signal/cancellation and state for some reason 
+SO THE VERY FIRST FIVE MIDDLEWARE I WOULD WNAT IS ,RETRY ,tokenLogger,guardrail,cache and rate limit 
+
+
+#12-**interface design notes :**
+HIGH LEVEL DESIGN OF INTERFACE
+-agentInput
+	-LLMInput
+		-toolInput
+		-memoryInput
+-agentOutput/response
+	-LLMoutput
+		-toolOutput
+		-memoryManagerOutput
+-agentInitialization
+	-agentParams(tools,memory,middleware,etc)
+
+**BLOCK LEVEL DESIGN OF INTERFACE**
+-middlewareContext;
+-agentEvent;
+-historyMessage;
+
+QUESTIONS-WHAT ARE THE GLOBAL TYPES,which will never change in this repo
+2-high level interface should be designed first ,to make sure it covers everything being used in the downstream !
+these were the doubts for that i was read few blogs here are my findings
+-parser better than validator,so always parse the data after validating it
+I had a prototyope for this but then i used the claude for this part as i was not getting much time on this part to build !
+(just see the agentTypes.png in the root level)
+
+
+IMPLEMENTING MIDDLEWARE was the most exciting part and bit challenging for me,since i had to implement a middlewareChain execute-stream method as well for which obviously had zero idea so i first read about it even published a small tldraw over it on my linked of writing this method from scratch and now i understand better and now i will be implementing middlewares and will add it in the middlewares array in the middlewareChain class,kinda chain of responsibility pattern with handler and next ,handler here means each middleware and next is the callback that each middleware has ! 
+checkout this LINK-
+https://www.tldraw.com/p/UNgK7x5vdBDRD9IH3UuG_?d=v-2294.-554.6656.3984.page
+
+
+THE next step after implementing our middlewareChain was to integrate openTelemetery middleware now to understand this you must get what the heck span obj is ! BECAUSE the book i was following was simply suggesting span bla bla ! so i read about it ,basically span is just an object which you could give name and when you end an span it remmebrs the duration time ! for eg see the below psuedo code
+class testSpan {
+    name,
+    startTime=time.now()
+    duration
+
+    constructor(name){
+        this.name=name
+        this.startTime
+        return span created for name ,this.name!
+    }
+    end (){
+        return this.startTime-this.time.now()
+    }
+
+}
+
+now i had difficulty understanding also about when should span obj should actually live ! firstly i thought it should live wiht each middleware instance and lets jsut add this span object in to the baseMiddleware pvt variable but WRONG ! span is associated with each process ! why the heck span should carry the time the moement anu middleware instance got created?it should only exist when middleware methods are called ! beause they will only be called when they are required ! and it is exactly then only we should make the span object alive !
+SO WHERE EXACTLY YOU SHOUDL store the span obj ,i even thought of storing it in the middlewareChain class but then each time it will execute set of middlewares of different calls it will overwrite the last span obj ! so it should stay in the per request ! that is in the params of the middlewareContext ! because for each modle call that is going to be different right ! and also Ai helped me here so we will add a key metaData in teh middlewareContext which will hold the span obj ! for each call

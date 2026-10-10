@@ -177,14 +177,14 @@ async function memory(path:string,command:string,file_text?:string,old_str?:stri
 // write me a fx that will validate the path is inside the base directory and not outside it !
 
 
-const BASE_PATH="./home"
-const CURRENT_PATH="./home/pkgs/test1"
-const homeDir=["pkgs","src"]
-const TEST_PATH_1="./home/src" //invalid
-const TEST_PATH_2="./home/src/folder1" // invalid
-const TEST_PATH_3="../../src" //valid
-const TEST_PATH_4="../../../outsideFolder" //not allowed
-const TEST_PATH_5="../../../" //not allowed
+// const BASE_PATH="./home"
+// const CURRENT_PATH="./home/pkgs/test1"
+// const homeDir=["pkgs","src"]
+// const TEST_PATH_1="./home/src" //invalid
+// const TEST_PATH_2="./home/src/folder1" // invalid
+// const TEST_PATH_3="../../src" //valid
+// const TEST_PATH_4="../../../outsideFolder" //not allowed
+// const TEST_PATH_5="../../../" //not allowed
 
 // @Update-fix this validate Path function
 function validatePath(currPath:string,BASE_PATH:string,finalPath:string){

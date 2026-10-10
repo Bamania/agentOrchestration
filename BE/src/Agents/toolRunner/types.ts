@@ -36,3 +36,7 @@ export interface IToolRunner{
     execute(calls:ToolCall[]):Promise<ToolResult[]>;
     getDefinitions():ToolDefinition[];
 }
+
+export interface IMiddlewareChain {
+    execute_stream(middlewares:Array<any>):AsyncGenerator<void>
+}

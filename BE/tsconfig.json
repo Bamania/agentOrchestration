@@ -40,5 +40,8 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  // archive/ holds the superseded Memory layer; it is outside rootDir,
+  // so sweeping it in with the default "**/*" breaks the build.
+  "exclude": ["archive", "dist", "node_modules"]
 }
