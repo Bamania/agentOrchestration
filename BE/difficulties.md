@@ -138,3 +138,12 @@ class testSpan {
 
 now i had difficulty understanding also about when should span obj should actually live ! firstly i thought it should live wiht each middleware instance and lets jsut add this span object in to the baseMiddleware pvt variable but WRONG ! span is associated with each process ! why the heck span should carry the time the moement anu middleware instance got created?it should only exist when middleware methods are called ! beause they will only be called when they are required ! and it is exactly then only we should make the span object alive !
 SO WHERE EXACTLY YOU SHOUDL store the span obj ,i even thought of storing it in the middlewareChain class but then each time it will execute set of middlewares of different calls it will overwrite the last span obj ! so it should stay in the per request ! that is in the params of the middlewareContext ! because for each modle call that is going to be different right ! and also Ai helped me here so we will add a key metaData in teh middlewareContext which will hold the span obj ! for each call
+
+Now sure this should be in the difficulty.md but i had to integrate another provider to test ,gemini ,i felt lazy going over their docs so i just asked the claude to write the provider for me lol also to wire up this mini agent library into a test.js ! to check if everythigns working for me now !!
+
+I HAVE Ignored testing my telemetry system
+with the jaeger or grafana etc ! will do it later @UPDATE but the important part was to understand the Span object and how we can assign it in the request and response cycle to actually use it to capture/calculate any event !
+
+THE NEXT code challenge is about producing agent as Tools !
+this is basically the tools name =agent.name and the tools.desc=agent.description and the tools.execute= becomes the agent.run/and run stream method ! this is what my First principle approach tells me ! and even lets say if i face some issue i will just implement an adapter for it to allow the agent act as a tool !
+also at this point just want to highlight that we dont have any baseClass for the tool defination ! we just have the I tool defination for any tools to follow this convention !

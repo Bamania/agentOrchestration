@@ -6,10 +6,7 @@ import type {
     Result,
 } from "../../../globalTypes.js";
 
-// NOTE: the old local `MemoryContent {id, content}` is replaced by the shared
-// HistoryMessage - it adds `role` (without which a stored message cannot be
-// replayed into a provider request) and `chatId` (without which one chat's
-// history leaks into another).
+
 
 let seq = 0;
 
@@ -61,36 +58,40 @@ constructor(maxMessages: number) {
 
     return { ok: true, value: messsageContent };
   }
+  
   async query(request:MemoryRequest):Promise<Array<HistoryMessage>> {
     const limit = request.limit ?? 10;
     // this function is to search the string match in the Memory array and then return it
-    let queryString=request.query ?? ''
+    const queryString=(request.query ?? '').toLowerCase()   
     const matchingMemories:HistoryMessage[]=[]
-    queryString.toLowerCase();
-     for(let i=this.maxMessages;i>=this.maxMessages-limit;i--){
-         let storedString=this.messages[i]?.content.toLowerCase()  //@UPDATE-add the content key in the messageContent obj
-         // matchingMemories.push(this.messages[i]);
-         if(storedString==queryString){
-            matchingMemories.push(this.messages[i]!)
-         }
+    if(queryString==='') return matchingMemories;          
 
-       }
+    // newest -> oldest over the messages that EXIST, stop once we have `limit` matches
+    for(let i=this.messages.length-1;i>=0 && matchingMemories.length<limit;i--){
+        const m=this.messages[i];
+        if(m!==undefined && m.content.toLowerCase().includes(queryString)){
+            matchingMemories.push(m)
+        }
+    }
 
-       return matchingMemories;
+    return matchingMemories;
   }
 
+ 
   async get_context(request: MemoryRequest): Promise<Array<HistoryMessage>> {
       const maxItems = request.limit ?? 10;
       //this function returns the latest memory upto certain limit,
       //make an array copy the last 10 message body from the this.message and paste it and return the new array !
 
       const recentMemories:HistoryMessage[]=[]
-       for(let i=this.maxMessages;i>=this.maxMessages-maxItems;i--){
+      // the last `maxItems` messages that EXIST: start that many back from the end (never below 0)...
+      const start=Math.max(0,this.messages.length-maxItems);
+      // ...and walk FORWARD, so the conversation stays oldest -> newest
+      for(let i=start;i<this.messages.length;i++){
         const m = this.messages[i];
         if (m !== undefined) recentMemories.push(m);
-
-       }
-       return recentMemories;
+      }
+      return recentMemories;
 
   }
 

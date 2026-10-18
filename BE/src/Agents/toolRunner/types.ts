@@ -4,7 +4,7 @@ export interface ToolCall{
     id:string;                        // provider's call id - must be echoed back with the result
     tool_name:string;                 // which tool to run
     type?:string;                     // e.g. "function"
-    parameters:Record<string,any>;    // already JSON-parsed into an object
+    parameters:Record<string,any>;    // already JSON-parsed into an object-. params:{"city":"paris"}
 }
 
 // The result of executing one ToolCall, ready to feed back to the model.

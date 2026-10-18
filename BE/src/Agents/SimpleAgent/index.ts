@@ -64,7 +64,7 @@ class Agent extends BaseAgent {
     for (let iteration = 0; iteration < this.max_iteration; iteration++) {
       ctx.iteration = iteration;
 
-      // --- enrichment: AgentInput -> LLMInput -------------------------------
+      
       // chat-scoped history (what was said) and agent-scoped recall (what this
       // agent knows across chats) are fetched separately and kept separate, so
       // the provider decides how each is best expressed.

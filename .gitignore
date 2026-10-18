@@ -8,10 +8,26 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment variables
+# Environment variables - EVERY .env variant (.env, .env.local, .env.production, ...)
+# in ANY folder, except the committed template that lists the variable names only
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# Keys, certificates and credential files
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa*
+id_ed25519*
+credentials.json
+client_secret*.json
+*service-account*.json
+secrets/
+*.secret
+.npmrc
 
 # IDE and Editor
 .vscode/

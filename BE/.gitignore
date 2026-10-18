@@ -8,10 +8,11 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment variables
+# Environment variables - every .env variant, except the committed template
+# (the repo-root .gitignore also covers this; kept here so BE stays safe on its own)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # IDE and editor files
 .vscode/

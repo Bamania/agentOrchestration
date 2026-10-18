@@ -1,0 +1,5 @@
+Experiment with persistent memory: Start using agent frameworks that support memory persistence. Learn how to structure knowledge so agents can effectively retrieve and use it.
+Explore domain-specific skills: Identify the specialized knowledge in your organization that could be encoded as agent skills. Start building skill packs for your most common workflows.
+Demand production-grade reliability: Don't settle for demo-quality AI tools. Push for agents that have error handling, logging, and observability built in.
+Think about multi-agent workflows: Consider how your development process could benefit from multiple specialized agents working together. Start experimenting with orchestration frameworks.
+Evaluate self-hosted options: Understand the trade-offs between cloud-based and self-hosted AI infrastructure. For sensitive workloads, self-hosting may be the right choice.
