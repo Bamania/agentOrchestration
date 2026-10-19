@@ -1,22 +1,39 @@
-# Todos
+# BE – the core agent library
+The agent library itself, written from scratch in TypeScript. Everything else in this repo (the API and the React app in OrcPatterns/) will be built on top of this.
 
-1. Create your cortex class from which you could import Agents and modelProvider code to make llm api call
-   - e.g. `from picoagents import Agents, OpenAiChatCompletion`
+The idea is to build an inbuilt feedback loop cycle in this agent library (still not built, but this is what I am trying to achieve with this project).
 
-#Learning
-2-You should have an idea about how the agent prepares the execution context,what data it needs to
-have in its run call before finally sending it to the ai provider -agents system prompt + prev history msg + currentTask
 
-<!-- Add more todos below this line -->
-3-Implement the structure output key in the agent response
 
-4-So to add any tool responnse in our agent we must first understand that we use a unified agent response approach
-<!-- our agent class shouldnt be dealing with the tool response logic and everything so we manually need to  -->
-format the llm providers response ! and send it in a unified way from our agent (check the helper.ts ,formatAgentResponse() ) ,that function has a switch case and executes different way of formating to handle the logic
+`test.js` builds an agent and runs a few scenarios: a simple question, memory across turns, a tool call, streaming events, and the middleware chain blocking a prompt injection.
 
-to integrate the tool we must need to understand that we need a place
-where we could define a tool,
-then we need to format the llm response such that the agent could request for the tool Response !
-and then we need to execute the tool with the right parameters
-and then finally we need to send the output to the agent response !
-now to actually implement all these steps we first need to understand the how we should actually get the output of the execute tool(figure out the format?)
+
+## What's where
+
+| Folder / file | What it is |
+|---|---|
+| [`src/globalTypes.ts`](src/globalTypes.ts) | The shared types: `AgentInput`, `LLMInput`, `AgentResponse`, `AgentEvent`, `MiddlewareContext`, `HistoryMessage`… |
+| [`src/Agents/baseAgent.ts`](src/Agents/baseAgent.ts) | The abstract agent: holds the config and builds the middleware chain |
+| [`src/Agents/SimpleAgent/`](src/Agents/SimpleAgent/index.ts) | The concrete agent and its tool-calling loop |
+| [`src/Agents/toolRunner/`](src/Agents/toolRunner/index.ts) | Tool registry + parallel execution; a tool is anything that implements `ITool` |
+| [`src/Agents/Memory-1/`](src/Agents/Memory-1/index.ts) | `MemoryManager` (abstract) and `ListMemory` (in-process list) |
+| [`src/Agents/middleware/`](src/Agents/middleware/index.ts) | `BaseMiddleware`, the async-generator `MiddlewareChain`, plus security and logging middlewares and a `Span` |
+| [`src/llmProviders/`](src/llmProviders/lllmProvider.ts) | `llmProvider` (abstract) with OpenAI and Gemini adapters |
+| [`src/autoinstrumentation/`](src/autoinstrumentation/index.ts) | Env-driven middlewares that are added to every agent |
+| [`src/adapters/`](src/adapters/) | Agent-as-tool adapter (in progress) |
+| [`src/config.ts`](src/config.ts) | Loads `.env` and exports the typed `config` |
+| [`test.js`](test.js) | Manual smoke test (imports from `dist/`) |
+
+## Middleware
+
+A middleware has three hooks, each an async generator:
+
+| Hook | Runs | Can |
+|---|---|---|
+| `process_request` | on the way in | change the context, or block the request |
+| `process_response` | on the way out, after success | observe and report |
+| `process_error` | on the way out, after an error | observe and report |
+
+The chain runs them like an onion: requests run first → last, and responses run last → first. A middleware decides what to act on by checking `ctx.operation` (`agent_run`, `model_call`, `tool_call`, `memory_access`).
+
+

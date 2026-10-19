@@ -35,4 +35,5 @@ npm install
 cp .env.example .env      # add an OpenAI or Gemini key; with no key, test.js uses a fake model
 npx tsc && node test.js
 ```
-(STILL WORKING ON IT WHENEVER I GET TIME)
+
+Also go through the [`difficulties.md`](BE/difficulties.md) inside `BE/` to understand what issues I faced while building it. I am trying to maintain it consistently, whenever I get time.
