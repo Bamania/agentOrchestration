@@ -65,3 +65,8 @@ temp/
 
 # Local development
 .claude/
+
+# Personal Claude instruction files - in any folder, any casing
+claude.md
+CLAUDE.md
+Claude.md
