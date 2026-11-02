@@ -278,3 +278,11 @@ This is basically:
 This is what my **first-principle approach** tells me! And even, let's say, if I face some issue, I will just implement an **adapter** for it, to allow the agent to act as a tool!
 
 Also, at this point I just want to highlight that we don't have any base class for the tool definition! We just have the `ITool` definition for any tools to follow this convention!
+
+so my first principle approach was to add this as_tool() in the base agent itself and it will retun an agent which will be like ITool schema and to handle this logic i could make a agentAstool class which will do it.
+Now the mistake i was doing was i was planning to create one method in the ToolRunner class which was , adding a appendTool method which is compeltely wrong because it is already getting appeneded the moment i decided to pass the agent1 as tool inside the tool runner class as param !
+eg- new ToolRunner(agent1as_tools(),Tool1,Tool2) etc.
+second few basic mistake i was doing was that execute key requried a function and i wass passing the raw funciton,which is agent.run ,but again this is not sufficient as agent.run only runs when we pass the input to it,so we get the response from the agent.run (x)
+and then mimic the execute as if it executed the agent run ! 
+also while returning the tool result I made a mistake is that i was returning the response directly again i forgot i was making sure the execute returns the toolResult scehma so i have to get the right keys from the agent respones and then build the toolresult accordingly !
+and I also removed the as_tool() method from being an abstract method as its function is going to fixed !

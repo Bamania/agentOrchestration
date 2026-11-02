@@ -5,11 +5,12 @@ import type {
   AgentResponse,
   MemoryScope,
 } from "../globalTypes.js";
-import type { IToolRunner } from "./toolRunner/types.js";
+import type { IToolRunner, ITool } from "./toolRunner/types.js";
 import type llmProvider from "../llmProviders/lllmProvider.js";
 import type MemoryManager from "./Memory-1/index.js";
 import type BaseMiddleware from "./middleware/index.js";
 import { MiddlewareChain } from "./middleware/middlewareChain/index.js";
+import { AgentAsTool } from "./toolRunner/tools/agentasTool/index.js";
 import { getAutoMiddlewares } from "../autoinstrumentation/index.js";
 
 /**
@@ -30,8 +31,10 @@ export interface AgentConfig extends AgentInitialization {
 
 abstract class BaseAgent {
   name: string;
+  description: string;       // shown to other agents' models when this agent is used as a tool
   model_id: string;
   instruction: string;
+  // tools:ToolDefinition[];
   toolRunner: IToolRunner;   // owns tool schemas + execution
   memory: MemoryManager;     // the live memory layer (Memory-1)
   model_client: llmProvider; // wraps whichever provider we're on
@@ -42,8 +45,9 @@ abstract class BaseAgent {
   defaultMemoryScope: MemoryScope;
 
   constructor(config: AgentConfig) {
-
+    
     this.name = config.name;
+    this.description = config.description ?? `The ${config.name} agent. Give it a complete task and it returns its answer.`;
     this.model_id = config.model_id;
     this.instruction = config.systemInstructions ?? "";
     this.toolRunner = config.toolRunner;
@@ -58,7 +62,12 @@ abstract class BaseAgent {
     this.outputSchema = config.outputSchema;
     this.defaultMemoryScope = config.defaultMemoryScope ?? "chat";
   }
-
+  // Wraps THIS agent in the adapter so it can sit in another agent's ToolRunner:
+  //   new ToolRunner([ weatherAgent.as_tool() ])
+  // Not abstract: it is the same one line for every kind of agent.
+  as_tool(): ITool {
+    return new AgentAsTool(this).agentTool;
+  }
   // Every agent has two entry points: run and run_stream.
   // Both now take the AgentInput object from the whiteboard, not a bare string -
   // because a run needs to know WHICH CHAT it belongs to, not just what was said.

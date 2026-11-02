@@ -108,6 +108,8 @@ export interface AgentContext {
 
 export interface AgentInitialization {
     name: string;
+    /** What this agent is good at - shown to OTHER agents' models when it is used as a tool. */
+    description?: string;
     model_id: string;
     systemInstructions?: string;
     tools?: ToolDefinition[];

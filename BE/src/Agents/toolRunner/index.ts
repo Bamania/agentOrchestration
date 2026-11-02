@@ -21,6 +21,9 @@ class ToolRunner implements IToolRunner {
     for (const tool of tools) this.register(tool);
   }
 
+  appendTool(tool:ITool):void{
+    this.register(tool)
+  }
   register(tool: ITool): void {
     this.registry.set(tool.tool_name, tool);
   }

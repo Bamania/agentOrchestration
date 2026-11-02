@@ -96,6 +96,16 @@ const agent = new Agent({
   maxIterations: 5,
 });
 
+const agent2=new Agent({
+    name: "test-agent",
+  model_id: MODEL,
+  systemInstructions: "You are a helpful assistant. Keep answers short.",
+  toolRunner: new ToolRunner([T1,t2,agent.as_tool()]),
+  memory,
+  model_client,
+  middlewares: [new SecurityMiddleware()],
+  maxIterations: 5,
+})
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
