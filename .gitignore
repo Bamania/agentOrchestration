@@ -5,8 +5,17 @@ yarn.lock
 
 # Build output
 dist/
+dist-ssr/
 build/
+out/
 *.tsbuildinfo
+
+# Tool caches (Vite for the React client, linters, bundlers)
+.vite/
+.cache/
+.turbo/
+.parcel-cache/
+.eslintcache
 
 # Environment variables - EVERY .env variant (.env, .env.local, .env.production, ...)
 # in ANY folder, except the committed template that lists the variable names only
@@ -35,17 +44,19 @@ secrets/
 *.swp
 *.swo
 *~
-.DS_Store
 *.code-workspace
 
 # OS files
 Thumbs.db
 .DS_Store
 
-# Logs
+# Logs - the harness and server will write run logs; they can contain prompts and API output
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
 # Runtime data
@@ -62,6 +73,7 @@ coverage/
 tmp/
 temp/
 *.tmp
+*.tgz
 
 # Local development
 .claude/

@@ -1,0 +1,19 @@
+{
+  "name": "runtime-harness",
+  "version": "1.0.0",
+  "description": "Harness engineering around the OpenAI SDK (later: the custom agent library in ../../src)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "openai": "^6.42.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.6",
+    "typescript": "^6.0.3"
+  }
+}

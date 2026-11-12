@@ -41,7 +41,8 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  // archive/ holds the superseded Memory layer; it is outside rootDir,
-  // so sweeping it in with the default "**/*" breaks the build.
-  "exclude": ["archive", "dist", "node_modules"]
+  // archive/ holds the superseded Memory layer and harness-engineering/ (harness, server,
+  // client) holds separate projects with their own package.json + tsconfig; all are outside
+  // rootDir, so sweeping them in with the default "**/*" breaks the build.
+  "exclude": ["archive", "harness-engineering", "dist", "node_modules"]
 }
