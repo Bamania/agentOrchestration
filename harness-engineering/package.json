@@ -1,7 +1,7 @@
 {
-  "name": "runtime-harness",
+  "name": "harness-engineering",
   "version": "1.0.0",
-  "description": "Harness engineering around the OpenAI SDK (later: the custom agent library in ../../src)",
+  "description": "Harness engineering around the OpenAI SDK (later: the custom agent library in ../BE)",
   "private": true,
   "type": "module",
   "scripts": {

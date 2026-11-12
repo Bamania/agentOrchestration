@@ -19,6 +19,6 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": ["*.ts"],
+  "include": ["harness/**/*.ts", "server/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }
