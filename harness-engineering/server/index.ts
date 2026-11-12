@@ -1,6 +1,6 @@
 import { config } from "dotenv";
-// Load secrets from .dev.vars (OPENAI_API_KEY, ...) before anything else.
-config({ path: ".dev.vars" });
+// Load secrets from .env (OPENAI_API_KEY, ...) before anything else.
+config(); // reads harness-engineering/.env (run the server from that folder)
 
 import express from "express";
 import { createServer } from "node:http";

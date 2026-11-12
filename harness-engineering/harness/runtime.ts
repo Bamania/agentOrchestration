@@ -1,21 +1,23 @@
 import { randomUUID } from "node:crypto";
 import { EventType, type Emit } from "../shared/events/events.js";
+import { streamText, type ModelMessage } from "ai";
+import { SYSTEM_PROMPT } from "./system-promt.js";
+import { model } from "./model.js";
+import { tools } from "./test-tool.js";
+// This is the seam the where whole agent execution lives in.
 
-// This is the seam the whole course lives in.
-//
-// Right now it is a STUB: it announces a workflow, logs that nothing is wired
-// up yet, and finishes. The starter app runs end-to-end (browser → socket →
-// server → bus → browser) with this hole in the middle.
-//
-// In LESSON 1 you replace the body with the brittle agent loop:
+
+// BASIC AGENT EXECUTION !! MOST OF THESE STEPS ARE PRETTY STANDARD NOW,STANDARD ENOUGH ONE SINGLE PROMPT TO GOOD MODEL 
+// CAN WRITE IT FOR YOU
+
 //   - call the model (streamText) with the task as the prompt
 //   - stream tokens out as `model.delta` events
 //   - when the model asks for a tool, run it and emit `tool.requested` /
 //     `tool.completed`, then feed the result back to the model
 //   - repeat until the model stops asking for tools
 //
-// Then you spend the rest of the day discovering everything this naive loop
-// gets wrong in production, and building the harness that fixes it.
+
+
 const MAX_STEPS = 10;
 
 // THE BRITTLE AGENT.
@@ -34,7 +36,8 @@ export async function runAgent(opts: { input: string; emit: Emit }): Promise<voi
   const workflowId = randomUUID();
   emit({ type: EventType.WorkflowStarted, workflowId, input });
 
-  // BRITTLE STATE: a plain in-memory array. If this process dies, it's gone.
+
+  //small in memory Msg array,imagine you fetch the messages from the DB !
   const messages: ModelMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: input },
