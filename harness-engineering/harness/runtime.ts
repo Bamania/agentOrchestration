@@ -3,8 +3,15 @@ import { EventType, type Emit } from "../shared/events/events.js";
 import { streamText, type ModelMessage } from "ai";
 import { SYSTEM_PROMPT } from "./system-promt.js";
 import { model } from "./model.js";
-import { tools } from "./test-tool.js";
+import { runTool, tools } from "./test-tool.js";
+import { emit } from "./bus.js";
+import { DBOS } from "@dbos-inc/dbos-sdk";
+import { raw } from "express";
+import type { JSONValue } from "@dbos-inc/dbos-sdk/internal/serialization";
 // This is the seam the where whole agent execution lives in.
+const MAX_STEPS = 10;
+type ToolCall = { toolCallId: string; toolName: string; input: Record<string, unknown> };
+type Turn = { text: string; toolCalls: ToolCall[]; responseMessages: ModelMessage[] };
 
 
 // BASIC AGENT EXECUTION !! MOST OF THESE STEPS ARE PRETTY STANDARD NOW,STANDARD ENOUGH ONE SINGLE PROMPT TO GOOD MODEL 
@@ -16,28 +23,62 @@ import { tools } from "./test-tool.js";
 //     `tool.completed`, then feed the result back to the model
 //   - repeat until the model stops asking for tools
 //
+// We need to wrap each function call into the durable Engine support !!
+async function modelTurn(workflowId: string, messages: ModelMessage[]) {
+  const result = streamText({ model, messages, tools })
+
+  for await (const part of result.fullStream) {
+    if (part.type === "text-delta") {  // this part.type depends on the sdk you are using !!
+      await emit({ type: EventType.ModelDelta, workflowId, text: part.text }); //dont forget to await emit ,as it is an async fx now!!
+    }
+  }
+
+  const rawCalls = await result.toolCalls;
+  return {
+    text: await result.text,
+
+    toolsCalls: rawCalls.map((c) => ({
+      toolCallId: c.toolCallId,
+      toolName: c.toolName,
+      input: c.input
+    })),
+    responesMessages: (await result.response).messages //copied the response array !
+  }
 
 
-const MAX_STEPS = 10;
+}
 
-// THE BRITTLE AGENT.
-//
-// This is a script with an LLM in the middle. It works in a demo and dies in
-// production a dozen ways:
-//
-//   · the `messages` array lives in memory      → crash = total loss
-//   · tools run with no mediation               → `sendReply` just fires
-//   · history only grows                        → context bloat
-//   · one agent does everything                 → no specialization
-//
-// Make it work, then look at everything it gets wrong.
-export async function runAgent(opts: { input: string; emit: Emit }): Promise<void> {
-  const { input, emit } = opts;
-  const workflowId = randomUUID();
-  emit({ type: EventType.WorkflowStarted, workflowId, input });
+async function toolStep(workflowId: string, call: ToolCall): Promise<Record<string, unknown>> {
+  await emit({
+    type: EventType.ToolRequested,
+    workflowId,
+    toolCallId: call.toolCallId,
+    name: call.toolName,
+    args: call.input,
+
+  })
+  const output = await runTool(call.toolName, call.input);
+  await emit({
+    type: EventType.ToolCompleted,
+    workflowId,
+    toolCallId: call.toolCallId,
+    result: output,
+  });
+  return output;
+}
 
 
-  //small in memory Msg array,imagine you fetch the messages from the DB !
+
+
+export async function agentWorkflow(input: string): Promise<string> {
+
+  const workflowId = DBOS.workflowID ?? "unknown";
+
+  await DBOS.runStep(
+    () => emit({ type: EventType.WorkflowStarted, workflowId, input }),
+    { name: "started" },
+  );
+  //small in memory Msg array,imagine you fetch the messages from the DB ! ,the type is according to the sdk you use,here vercel ai sdk !
   const messages: ModelMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: input },
@@ -47,56 +88,59 @@ export async function runAgent(opts: { input: string; emit: Emit }): Promise<voi
   // because streamText does a single generation by default.
   let step = 0;
   while (step < MAX_STEPS) {
-    const result = streamText({ model, messages, tools });
-
-    // Forward everything the model does onto the harness event stream so the
-    // inspector can render it. (`part.type` here is the AI SDK's, not ours.)
-    for await (const part of result.fullStream) {
-      switch (part.type) {
-        case "text-delta":
-          emit({ type: EventType.ModelDelta, workflowId, text: part.text });
-          break;
-        case "tool-call":
-          emit({
-            type: EventType.ToolRequested,
-            workflowId,
-            toolCallId: part.toolCallId,
-            name: part.toolName,
-            args: part.input,
-          });
-          break;
-        case "tool-result":
-          emit({
-            type: EventType.ToolCompleted,
-            workflowId,
-            toolCallId: part.toolCallId,
-            result: part.output,
-          });
-          break;
-        case "error":
-          emit({ type: EventType.WorkflowFailed, workflowId, error: String(part.error) });
-          return;
-      }
-    }
+    const turn = await DBOS.runStep(() => modelTurn(workflowId, messages), { name: `model- ${step}` })
 
     // Append the model's message(s) — including any tool results — to history.
-    messages.push(...(await result.response).messages);
+    messages.push(...turn.responesMessages);
 
     // No more tool calls means the model answered. We're done.
-    const toolCalls = await result.toolCalls;
-    if (toolCalls.length === 0) {
-      const text = await result.text;
-      emit({ type: EventType.ModelCompleted, workflowId, text });
-      emit({ type: EventType.WorkflowCompleted, workflowId, output: text });
-      return;
+
+    if (turn.toolsCalls.length === 0) {
+      await DBOS.runStep(
+        () => emit({ type: EventType.ModelCompleted, workflowId, text: turn.text }),
+        { name: `model-done-${step}` },
+      );
+      await DBOS.runStep(
+        () => emit({ type: EventType.WorkflowCompleted, workflowId, output: turn.text }),
+        { name: "completed" },
+      );
+      return turn.text;
+    }
+    //toolCalling happened
+    for (const call of turn.toolsCalls) {
+      const output = await DBOS.runStep(() => toolStep(workflowId, call as ToolCall), {
+        name: `tool-${call.toolCallId}`,
+      });
+      // Feed the tool result back to the model on the next turn.
+      messages.push({
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: call.toolCallId,
+            toolName: call.toolName,
+            output: { type: "json", value: output },
+          },
+        ],
+      });
     }
 
     step++;
   }
+  await DBOS.runStep(
+    () =>
+      emit({
+        type: EventType.WorkflowFailed,
+        workflowId,
+        error: `Hit the ${MAX_STEPS}-step limit without finishing.`,
+      }),
+    { name: "failed" },
+  );
+  return "";
 
-  emit({
-    type: EventType.WorkflowFailed,
-    workflowId,
-    error: `Hit the ${MAX_STEPS}-step limit without finishing.`,
-  });
 }
+
+
+export const runAgentWorkflow = DBOS.registerWorkflow(agentWorkflow, {
+  name: "agentWorkflow",
+}); 
