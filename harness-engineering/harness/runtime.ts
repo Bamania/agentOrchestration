@@ -119,6 +119,7 @@ export async function agentWorkflow(input: string): Promise<string> {
             type: "tool-result",
             toolCallId: call.toolCallId,
             toolName: call.toolName,
+            //@ts-ignore
             output: { type: "json", value: output },
           },
         ],
