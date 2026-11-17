@@ -8,6 +8,7 @@ import { emit } from "./bus.js";
 import { DBOS } from "@dbos-inc/dbos-sdk";
 import { raw } from "express";
 import type { JSONValue } from "@dbos-inc/dbos-sdk/internal/serialization";
+import { buildContext, estimateTokens, KEEP_CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, summarize } from "./memory.js";
 // This is the seam the where whole agent execution lives in.
 const MAX_STEPS = 10;
 type ToolCall = { toolCallId: string; toolName: string; input: Record<string, unknown> };
@@ -69,7 +70,7 @@ async function toolStep(workflowId: string, call: ToolCall): Promise<Record<stri
 
 
 
-
+// ----------------------------–---------------------------------------------//
 export async function agentWorkflow(input: string): Promise<string> {
 
   const workflowId = DBOS.workflowID ?? "unknown";
@@ -78,21 +79,51 @@ export async function agentWorkflow(input: string): Promise<string> {
     () => emit({ type: EventType.WorkflowStarted, workflowId, input }),
     { name: "started" },
   );
-  //small in memory Msg array,imagine you fetch the messages from the DB ! ,the type is according to the sdk you use,here vercel ai sdk !
-  const messages: ModelMessage[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: input },
-  ];
+
 
   // THE LOOP. We drive it ourselves — each pass is exactly one model turn,
   // because streamText does a single generation by default.
   let step = 0;
+  let turns:ModelMessage[][]=[];
+  let summary='' //it will be a string 
   while (step < MAX_STEPS) {
-    const turn = await DBOS.runStep(() => modelTurn(workflowId, messages), { name: `model- ${step}` })
+     
+      if(estimateTokens(turns.flat())>MAX_CONTEXT_TOKENS){
+        const old:ModelMessage[][]=[];
+        // summarize it 
+        while(turns.length>1 && estimateTokens(turns.flat())>KEEP_CONTEXT_TOKENS){
+            // just keep moving the context 
+              const oldest=turns.shift(); 
+              if(oldest){
+                old.push(oldest);
+              }
+            }
+              // now when the context window is limited just generate a summary using the context !
+             summary=await DBOS.runStep(()=>summarize(old,summary),{name:`summarizing at this${step} `})
+            // now measure the token for the emit data only 
+            const contextTokens=estimateTokens(buildContext(SYSTEM_PROMPT,input,summary,turns))
+             await DBOS.runStep(
+          () =>
+            emit({
+              type: EventType.MemoryCompacted,
+              workflowId,
+              summarizedTurns: old.length,
+              contextTokens,
+              summary,
+            }),
+          { name: `compacted-${step}` },
+        );
+
+
+
+          }
+    // now check if the message is alreadt bloated or not !!
+    const context=buildContext(SYSTEM_PROMPT,input,summary,turns) // this context has the summary+history of the recent msgs
+    const turn = await DBOS.runStep(() => modelTurn(workflowId, context), { name: `model- ${step}` })
 
     // Append the model's message(s) — including any tool results — to history.
-    messages.push(...turn.responesMessages);
-
+   const turnMessages: ModelMessage[] = [...turn.responesMessages];
+    
     // No more tool calls means the model answered. We're done.
 
     if (turn.toolsCalls.length === 0) {
@@ -112,7 +143,7 @@ export async function agentWorkflow(input: string): Promise<string> {
         name: `tool-${call.toolCallId}`,
       });
       // Feed the tool result back to the model on the next turn.
-      messages.push({
+      turnMessages.push({
         role: "tool",
         content: [
           {
@@ -125,9 +156,11 @@ export async function agentWorkflow(input: string): Promise<string> {
         ],
       });
     }
-
+  turns.push(turnMessages)
     step++;
   }
+
+
   await DBOS.runStep(
     () =>
       emit({

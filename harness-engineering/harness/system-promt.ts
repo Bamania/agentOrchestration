@@ -11,11 +11,14 @@ For each work item:
 3. Draft a reply with draftReply, using anything runCode computed.
 4. Send the reply with sendReply.
 
-Work through every item, then briefly summarize what you did.
-Also if you need to do arthmetic please use runCode tool to create some js code and run it i n an async wrapper function.It has getCharges and searchKB `;
+Handle the items one at a time — finish all four steps for an item before
+starting the next. When every item is done, briefly summarize what you did.`;
 
 // A sample task to try. The billing item
-// is the one that pushes the agent into Code Mode.
+// // is the one that pushes the agent into Code Mode.
 // export const SAMPLE_TASK = `Handle these work items:
 // - item-1 (billing): Customer cus_88121 says they were charged twice. Find the duplicate charge and tell them the exact refund amount (in dollars).
-// - item-2 (bug_report): "The export button fails on Safari."`;
+// - item-2 (bug_report): "The export button fails on Safari."
+// - item-3 (sales): "Can you send pricing for 50 seats?"
+// - item-4 (technical): "I can't log in after resetting my password."
+// - item-5 (billing): "When will my refund post?"`;
