@@ -10,7 +10,7 @@ type Turn = { text: string; toolCalls: ToolCall[]; responseMessages: ModelMessag
 type Charge = { id: string; amount: number; date: string; description: string };
 
 // Note the planted duplicate: ch_001 and ch_002 are the same charge.
-const CHARGES: Record<string, Charge[]> = {
+export const CHARGES: Record<string, Charge[]> = {
   cus_88121: [
     { id: "ch_001", amount: 4900, date: "2026-05-01", description: "Pro plan — monthly" },
     { id: "ch_002", amount: 4900, date: "2026-05-01", description: "Pro plan — monthly" },
@@ -18,7 +18,7 @@ const CHARGES: Record<string, Charge[]> = {
   ],
 };
 
-const KNOWLEDGE_BASE: Record<string, string> = {
+export const KNOWLEDGE_BASE: Record<string, string> = {
   billing:
     "Double charges are usually a duplicate authorization that drops off in 3–5 days. If it already settled, refund immediately.",
   refund: "Refunds post in 5–10 business days. Pro accounts can be expedited.",
@@ -28,7 +28,7 @@ const KNOWLEDGE_BASE: Record<string, string> = {
     "Team plans are $20/seat/mo with a volume discount at 25+ seats. For 50+ seats, send the pricing PDF.",
 };
 
-function searchKB(query: string): string[] {
+export function searchKB(query: string): string[] {
   const q = query.toLowerCase();
   const hits = Object.entries(KNOWLEDGE_BASE)
     .filter(([key]) => q.includes(key))

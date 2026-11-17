@@ -6,10 +6,10 @@ import express from "express";
 import { createServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { ensureSchema } from "../harness/db.js";
-import { subscribe, history } from "../harness/bus.js";
+import { subscribe, history, clearHistory } from "../harness/bus.js";
 import { runAgentWorkflow } from "../harness/runtime.js";
 import type { ClientMessage } from "../shared/events/events.js";
-
+import { runSupervisorWorkflow } from "../harness/supervisor.js";
 const PORT = Number(process.env.PORT ?? 8787);
 
 async function main() {
@@ -25,6 +25,26 @@ async function main() {
   const app = express();
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
+  });
+
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Harness-Client");
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
+  app.post("/api/clear", async (_req, res) => {
+    try {
+      await clearHistory();
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
   });
 
   const server = createServer(app);
@@ -53,7 +73,11 @@ async function main() {
       if (message.type === "submit_task") {
         // Start the durable workflow in the background. It reports progress via
         // the event stream; we don't wait for the result here.
-        await DBOS.startWorkflow(runAgentWorkflow)(message.input);
+        const workflow =
+          message.mode === "supervised" || message.mode === "Planning"
+            ? runSupervisorWorkflow
+            : runAgentWorkflow;
+        await DBOS.startWorkflow(workflow)(message.input);
       }
     });
 

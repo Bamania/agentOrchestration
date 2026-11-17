@@ -66,5 +66,5 @@ export type Emit = (event: EventInput) => void;
 export type ClientMessage = {
   type: "submit_task";
   input: string;
-  mode?: "default" | "Planning";
+  mode?: "default" | "supervised" | "Planning";
 };
