@@ -1,9 +1,12 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { runInSandbox, type SandboxApi } from "./sandbox.js";
+import type { ModelMessage, ToolSet } from "ai";
 
 // ── Canned data the read tools serve ────────────────────────────────────────
 
+type ToolCall = { toolCallId: string; toolName: string; input: Record<string, unknown> };
+type Turn = { text: string; toolCalls: ToolCall[]; responseMessages: ModelMessage[] };
 type Charge = { id: string; amount: number; date: string; description: string };
 
 // Note the planted duplicate: ch_001 and ch_002 are the same charge.
@@ -75,6 +78,24 @@ export const tools = {
     description: "Send the drafted reply to the customer. This really emails them.",
     inputSchema: z.object({ itemId: z.string(), draftId: z.string() }),
   }),
+
+  // Privileged: only the billing specialist gets this. Moves real money.
+  issueRefund: tool({
+    description: "Issue a refund to the customer. IRREVERSIBLE — this moves real money.",
+    inputSchema: z.object({
+      customerId: z.string(),
+      chargeId: z.string(),
+      amountCents: z.number(),
+    }),
+  }),
+
+  // Hand the conversation to a specialist agent. The harness intercepts this —
+  // it switches the running agent rather than executing a tool.
+  handoff: tool({
+    description:
+      "Hand off the conversation to a specialist agent when the task needs a capability you don't have (e.g. issuing a refund → billing).",
+    inputSchema: z.object({ to: z.enum(["billing"]), reason: z.string() }),
+  }),
 };
 
 // ── The harness-owned executor ──────────────────────────────────────────────
@@ -98,7 +119,25 @@ export async function runTool(
       return { ok: true, draftId: `draft-${args.itemId}` };
     case "sendReply":
       return { sent: true, itemId: args.itemId, draftId: args.draftId };
+    case "issueRefund":
+      return {
+        refunded: true,
+        customerId: args.customerId,
+        chargeId: args.chargeId,
+        amountCents: args.amountCents,
+      };
     default:
       throw new Error(`unknown tool: ${name}`);
   }
+}
+
+// fake tool message for practice !,this is the response our agent Handoff tool should have given and formatted !
+// @ts-ignore
+export function toolResultMessage(call: ToolCall, value:JSONValue): ModelMessage {
+  return {
+    role: "tool",
+    content: [
+      { type: "tool-result", toolCallId: call.toolCallId, toolName: call.toolName, output: { type: "json", value} },
+    ],
+  };
 }

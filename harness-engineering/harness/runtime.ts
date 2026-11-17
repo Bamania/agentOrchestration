@@ -3,12 +3,13 @@ import { EventType, type Emit } from "../shared/events/events.js";
 import { streamText, type ModelMessage } from "ai";
 import { SYSTEM_PROMPT } from "./system-promt.js";
 import { model } from "./model.js";
-import { runTool, tools } from "./test-tool.js";
+import { runTool, toolResultMessage, tools } from "./test-tool.js";
 import { emit } from "./bus.js";
 import { DBOS } from "@dbos-inc/dbos-sdk";
 import { raw } from "express";
 import type { JSONValue } from "@dbos-inc/dbos-sdk/internal/serialization";
 import { buildContext, estimateTokens, KEEP_CONTEXT_TOKENS, MAX_CONTEXT_TOKENS, summarize } from "./memory.js";
+import { agents, triageAgent } from "./agent.js";
 // This is the seam the where whole agent execution lives in.
 const MAX_STEPS = 10;
 type ToolCall = { toolCallId: string; toolName: string; input: Record<string, unknown> };
@@ -75,6 +76,9 @@ export async function agentWorkflow(input: string): Promise<string> {
 
   const workflowId = DBOS.workflowID ?? "unknown";
 
+
+
+
   await DBOS.runStep(
     () => emit({ type: EventType.WorkflowStarted, workflowId, input }),
     { name: "started" },
@@ -83,6 +87,8 @@ export async function agentWorkflow(input: string): Promise<string> {
 
   // THE LOOP. We drive it ourselves — each pass is exactly one model turn,
   // because streamText does a single generation by default.
+
+    let currentAgent=triageAgent
   let step = 0;
   let turns:ModelMessage[][]=[];
   let summary='' //it will be a string 
@@ -139,7 +145,26 @@ export async function agentWorkflow(input: string): Promise<string> {
     }
     //toolCalling happened
     for (const call of turn.toolsCalls) {
-      const output = await DBOS.runStep(() => toolStep(workflowId, call as ToolCall), {
+      // this is where we need to handle
+      if(call.toolName==='handoff'){
+        // @ts-ignore
+        const to=String(call.input.to ?? " ")
+        // @ts-ignore
+        const reason=String(call.input.reason ?? " ")
+        const from=String(currentAgent.name?? " ")
+        
+        await DBOS.runStep(()=>{
+           return emit({
+            type:EventType.AgentHandoff,workflowId,from,to,reason
+          })
+        },{name:`handoff-${step}`})
+        currentAgent=agents[to] ??currentAgent
+        // @ts-ignore
+        turnMessages.push(toolResultMessage(call,{ok:true,handedofTo:to}))
+      }
+      else {
+
+        const output = await DBOS.runStep(() => toolStep(workflowId, call as ToolCall), {
         name: `tool-${call.toolCallId}`,
       });
       // Feed the tool result back to the model on the next turn.
@@ -155,6 +180,8 @@ export async function agentWorkflow(input: string): Promise<string> {
           },
         ],
       });
+      }
+
     }
   turns.push(turnMessages)
     step++;
